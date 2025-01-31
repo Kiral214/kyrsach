@@ -5,7 +5,11 @@ let movies = [
  ];
  
  // Получить все фильмы с фильтрацией и пагинацией
-
+ 
+const express = require('express');
+const router = express.Router();
+const Movie = require('./models/movie'); // Убедитесь, что модель "Movie" подключена
+const Sequelize = require('sequelize'); // Импорт Sequelize
 // Получить все фильмы с фильтрацией, пагинацией и средним рейтингом
 exports.getMovies = async (req, res) => {
    const { genre, year, page = 1, limit = 2 } = req.query;
@@ -68,7 +72,37 @@ exports.getMovieDetails = async (req, res) => {
    }
 };
 
- 
+
+// Маршрут для поиска фильмов по названию
+router.get('/search', async (req, res) => {
+  try {
+    const { title } = req.query;
+
+    if (!title) {
+      return res.status(400).json({ message: 'Параметр "title" обязателен' });
+    }
+
+    const movies = await Movie.findAll({
+      where: {
+        title: {
+          [Sequelize.Op.iLike]: `%${title}%`, // PostgreSQL регистронезависимый поиск
+        },
+      },
+    });
+
+    res.json(movies);
+  } catch (error) {
+    console.error('Ошибка при поиске фильмов:', error);
+    res.status(500).json({ message: 'Ошибка сервера', error: error.message });
+  }
+});
+
+  
+
+  
+  
+  module.exports = router;
+
  // Добавить новый фильм
  exports.createMovie = (req, res) => {
     const { title, genre, director, releaseYear } = req.body;

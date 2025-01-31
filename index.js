@@ -20,28 +20,31 @@ Review.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 Movie.hasMany(Review, { foreignKey: 'movieId', as: 'movieReviews' });
 Review.belongsTo(Movie, { foreignKey: 'movieId', as: 'movie' });
 
-app.use(cookieParser());
-app.use(express.json());  // Для обработки JSON в теле запросов
 app.use(cors({
-  origin: 'http://localhost:5173', // Укажите ваш фронтенд URL
-  credentials: true,              // Включаем поддержку cookie
+  origin: 'http://localhost:5173', // Адрес фронтенда
+  credentials: true,              // Разрешить использование куки
 }));
+app.use(cookieParser());
+app.use('/movies', movieController); // Использование маршрутов для фильмов
+app.use(express.json());  // Для обработки JSON в теле запросов
+
 
 // Middleware для проверки токена
 const authenticateToken = (req, res, next) => {
-  const token = req.cookies?.token; // Чтение токена из cookie
+  const token = req.cookies?.token; // Читаем токен из cookies
   if (!token) {
     return res.status(401).json({ message: 'Access token is missing' });
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded; // Добавляем информацию о пользователе в запрос
+    const decoded = jwt.verify(token, JWT_SECRET); // Проверяем токен
+    req.user = decoded; // Сохраняем пользователя в запросе
     next();
   } catch (error) {
     res.status(403).json({ message: 'Invalid token' });
   }
 };
+
 
 // Регистрация пользователя
 app.post('/register', authenticateToken, async (req, res) => {
@@ -366,7 +369,7 @@ app.post('/movies', async (req, res) => {
   }
 });
 
-app.put('/movies/:id', async (req, res) => {
+app.put('/movies/:id', authenticateToken, authorizeAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const {
